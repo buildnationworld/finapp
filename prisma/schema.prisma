@@ -1,0 +1,317 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pgcrypto]
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AccountProvider {
+  MPESA
+  AIRTEL
+  EQUITY
+  KCB
+  COOP
+  OTHER_BANK
+  OTHER
+}
+
+enum TransactionDirection {
+  IN
+  OUT
+}
+
+enum TransactionType {
+  TRANSFER
+  PAYMENT
+  WITHDRAWAL
+  DEPOSIT
+  FEE
+  AIRTIME
+  LOAN
+  REVERSAL
+  PAYBILL
+  TILL
+  OTHER
+}
+
+enum TransactionSource {
+  SMS
+  CSV
+  PDF
+  MANUAL
+  API
+}
+
+enum InsightKind {
+  SUMMARY
+  TREND
+  RECOMMENDATION
+  ANOMALY
+  FORECAST
+}
+
+enum InsightSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FraudStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+  CONFIRMED
+}
+
+enum ReportPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  TOOL
+  SYSTEM
+}
+
+enum AgentName {
+  EXTRACTION
+  CATEGORIZATION
+  FRAUD
+  FORECAST
+  COPILOT
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Core
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  currency     String   @default("KES")
+  timezone     String   @default("Africa/Nairobi")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts     Account[]
+  transactions Transaction[]
+  insights     AIInsight[]
+  fraudAlerts  FraudAlert[]
+  reports      Report[]
+  auditLogs    AuditLog[]
+  documents    ImportedDocument[]
+  chatSessions ChatSession[]
+}
+
+model Account {
+  id            String          @id @default(cuid())
+  userId        String
+  provider      AccountProvider
+  accountName   String
+  accountNumber String?
+  currency      String          @default("KES")
+  createdAt     DateTime        @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([userId, provider, accountNumber])
+  @@index([userId])
+}
+
+model Category {
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  color    String
+  icon     String
+  parentId String?
+  isSystem Boolean @default(true)
+
+  parent       Category?     @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children     Category[]    @relation("CategoryHierarchy")
+  transactions Transaction[]
+}
+
+model Transaction {
+  id                String               @id @default(cuid())
+  userId            String
+  accountId         String?
+  externalRef       String?
+  type              TransactionType
+  direction         TransactionDirection
+  amount            Decimal              @db.Decimal(14, 2)
+  fee               Decimal              @default(0) @db.Decimal(14, 2)
+  balanceAfter      Decimal?             @db.Decimal(14, 2)
+  counterpartyName  String?
+  counterpartyPhone String?
+  merchant          String?
+  categoryId        String?
+  occurredAt        DateTime
+  rawText           String?              @db.Text
+  source            TransactionSource    @default(SMS)
+  confidence        Float                @default(1.0)
+  metadata          Json?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account?              @relation(fields: [accountId], references: [id])
+  category  Category?             @relation(fields: [categoryId], references: [id])
+  embedding TransactionEmbedding?
+  alerts    FraudAlert[]
+
+  @@unique([userId, externalRef])
+  @@index([userId, occurredAt(sort: Desc)])
+  @@index([userId, categoryId, occurredAt(sort: Desc)])
+  @@index([userId, direction])
+}
+
+/// pgvector embedding for semantic search. Updated via raw SQL because Prisma
+/// does not yet support the `vector` column type natively.
+model TransactionEmbedding {
+  transactionId String                       @id
+  embedding     Unsupported("vector(768)")?
+  model         String
+  createdAt     DateTime                     @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+model AIInsight {
+  id           String          @id @default(cuid())
+  userId       String
+  kind         InsightKind
+  severity     InsightSeverity @default(INFO)
+  title        String
+  body         String          @db.Text
+  evidenceTxIds String[]
+  generatedBy  AgentName
+  modelId      String?
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, kind])
+}
+
+model FraudAlert {
+  id            String      @id @default(cuid())
+  userId        String
+  transactionId String
+  rule          String
+  score         Float
+  status        FraudStatus @default(OPEN)
+  explanation   String      @db.Text
+  createdAt     DateTime    @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  userId      String
+  period      ReportPeriod
+  periodStart DateTime
+  periodEnd   DateTime
+  summary     Json
+  pdfBytes    Bytes?
+  createdAt   DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period, periodStart])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String
+  agent       AgentName
+  input       Json
+  output      Json
+  modelId     String?
+  latencyMs   Int
+  confidence  Float?
+  explanation String?   @db.Text
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, agent, createdAt(sort: Desc)])
+}
+
+model ImportedDocument {
+  id          String         @id @default(cuid())
+  userId      String
+  filename    String
+  mime        String
+  sha256      String
+  rowCount    Int            @default(0)
+  status      DocumentStatus @default(PENDING)
+  error       String?
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sha256])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String        @default("New chat")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  sessionId   String
+  role        ChatRole
+  content     String   @db.Text
+  toolCalls   Json?
+  citedTxIds  String[]
+  modelId     String?
+  createdAt   DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
