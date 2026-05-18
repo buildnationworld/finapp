@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import {
   AccountProvider,
   PrismaClient,
@@ -247,14 +249,20 @@ async function seedAuditTrail(userId: string) {
 async function main() {
   console.log("→ Seeding categories");
   await seedCategories();
-  console.log(`→ Seeding demo user (${DEMO_EMAIL} / ${DEMO_PASSWORD})`);
-  const user = await seedDemoUser();
-  console.log("→ Seeding demo transaction history");
-  await seedDemoTransactions(user.id);
-  console.log("→ Generating fraud alerts, insights, and report snapshot");
-  await refreshUserIntelligence(user.id);
-  console.log("→ Writing audit trail");
-  await seedAuditTrail(user.id);
+
+  if (process.env.SEED_DEMO_DATA === "true") {
+    console.log(`→ Seeding demo user (${DEMO_EMAIL} / ${DEMO_PASSWORD})`);
+    const user = await seedDemoUser();
+    console.log("→ Seeding demo transaction history");
+    await seedDemoTransactions(user.id);
+    console.log("→ Generating fraud alerts, insights, and report snapshot");
+    await refreshUserIntelligence(user.id);
+    console.log("→ Writing audit trail");
+    await seedAuditTrail(user.id);
+  } else {
+    console.log("→ Skipping demo user and transaction seeding. Set SEED_DEMO_DATA=true to seed demo data.");
+  }
+
   console.log("✓ Seed complete");
 }
 

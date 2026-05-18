@@ -101,7 +101,7 @@ export function ImportSmsForm() {
               <ShieldCheck className="mt-0.5 h-4 w-4 text-emerald-300" />
               <p>
                 Only the pasted message bodies are parsed. No contact list, inbox sync, or
-                background SMS access is required in this web demo.
+                background SMS access is required in this web application.
               </p>
             </div>
             <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3">

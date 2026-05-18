@@ -55,9 +55,7 @@ export default function LandingPage() {
             <Link href="/login">Sign in</Link>
           </Button>
           <Button asChild size="sm">
-            <Link href="/login">
-              Try the demo <ArrowRight className="h-4 w-4" />
-            </Link>
+            <Link href="/login/signup">Sign up</Link>
           </Button>
         </div>
       </header>
@@ -76,18 +74,13 @@ export default function LandingPage() {
         </p>
         <div className="mt-10 flex items-center justify-center gap-3">
           <Button asChild size="lg">
-            <Link href="/login">
-              Open the demo <ArrowRight className="h-4 w-4" />
-            </Link>
+            <Link href="/login/signup">Sign up</Link>
           </Button>
           <Button asChild variant="outline" size="lg">
             <a href="#features">See how it works</a>
           </Button>
         </div>
-        <p className="mt-4 text-xs text-muted-foreground">
-          Demo login: <code className="rounded bg-secondary px-1.5 py-0.5">demo@pesapilot.ai</code>{" "}
-          / <code className="rounded bg-secondary px-1.5 py-0.5">demo1234</code>
-        </p>
+
       </section>
 
       <section id="features" className="container pb-24">

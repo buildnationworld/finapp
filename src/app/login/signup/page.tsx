@@ -2,12 +2,12 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { LoginForm } from "@/app/login/login-form";
+import { SignupForm } from "@/app/login/signup-form";
 import { auth } from "@/lib/auth";
 
-export const metadata = { title: "Sign in · PesaPilot AI" };
+export const metadata = { title: "Sign up · PesaPilot AI" };
 
-export default async function LoginPage({
+export default async function SignupPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string }>;
@@ -29,15 +29,15 @@ export default async function LoginPage({
         </Link>
 
         <div className="glass rounded-xl p-6">
-          <h1 className="mb-1 text-xl font-semibold tracking-tight">Welcome back</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Sign in to your AI financial OS.</p>
-          <LoginForm next={params.next} />
+          <h1 className="mb-1 text-xl font-semibold tracking-tight">Create an account</h1>
+          <p className="mb-6 text-sm text-muted-foreground">Start your AI financial journey today.</p>
+          <SignupForm />
         </div>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
-          Don't have an account?{" "}
-          <Link href="/login/signup" className="font-semibold underline">
-            Sign up
+          Already have an account?{" "}
+          <Link href="/login" className="font-semibold underline">
+            Sign in
           </Link>
         </p>
       </div>
