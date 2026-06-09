@@ -30,7 +30,9 @@ export default async function SignupPage({
 
         <div className="glass rounded-xl p-6">
           <h1 className="mb-1 text-xl font-semibold tracking-tight">Create an account</h1>
-          <p className="mb-6 text-sm text-muted-foreground">Start your AI financial journey today.</p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            Start your AI financial journey today.
+          </p>
           <SignupForm />
         </div>
 

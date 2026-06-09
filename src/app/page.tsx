@@ -80,7 +80,6 @@ export default function LandingPage() {
             <a href="#features">See how it works</a>
           </Button>
         </div>
-
       </section>
 
       <section id="features" className="container pb-24">

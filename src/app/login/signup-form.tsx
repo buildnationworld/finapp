@@ -47,15 +47,21 @@ export function SignupForm() {
       });
 
       if (signInRes?.error) {
-        toast.error("Registration successful, but automatic sign-in failed. Please try logging in manually.");
+        toast.error(
+          "Registration successful, but automatic sign-in failed. Please try logging in manually.",
+        );
         router.push("/login");
       } else {
         toast.success("Registration successful!");
         router.push("/dashboard");
         router.refresh();
       }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred during registration.");
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred during registration.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

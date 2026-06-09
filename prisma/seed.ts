@@ -260,7 +260,9 @@ async function main() {
     console.log("→ Writing audit trail");
     await seedAuditTrail(user.id);
   } else {
-    console.log("→ Skipping demo user and transaction seeding. Set SEED_DEMO_DATA=true to seed demo data.");
+    console.log(
+      "→ Skipping demo user and transaction seeding. Set SEED_DEMO_DATA=true to seed demo data.",
+    );
   }
 
   console.log("✓ Seed complete");

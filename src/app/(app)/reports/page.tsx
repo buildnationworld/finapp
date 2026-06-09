@@ -1,18 +1,54 @@
+import { DocumentStatus } from "@prisma/client";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/page-header";
+import { type AnalyzerResponse, ReportAnalyzerForm } from "@/components/report-analyzer-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { getWorkspaceData } from "@/lib/finance";
 import { formatKES } from "@/lib/utils";
 
 export const metadata = { title: "Reports · PesaPilot AI" };
 
+function toAnalyzerResponse(
+  document: { id: string; metadata: unknown } | null,
+): AnalyzerResponse | null {
+  if (!document || typeof document.metadata !== "object" || document.metadata === null) {
+    return null;
+  }
+
+  const metadata = document.metadata as Partial<AnalyzerResponse["analysis"]>;
+  if (!metadata.extracted || !metadata.analysis || !metadata.visuals || !metadata.rows) {
+    return null;
+  }
+
+  return {
+    documentId: document.id,
+    analysis: metadata as AnalyzerResponse["analysis"],
+  };
+}
+
 export default async function ReportsPage() {
   const session = await auth();
-  const data = await getWorkspaceData(session!.user.id);
+  const userId = session!.user.id;
+  const [data, latestDocument] = await Promise.all([
+    getWorkspaceData(userId),
+    prisma.importedDocument.findFirst({
+      where: {
+        userId,
+        status: DocumentStatus.COMPLETED,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        metadata: true,
+      },
+    }),
+  ]);
+  const latestAnalyzerResponse = toAnalyzerResponse(latestDocument);
 
   return (
     <>
@@ -51,6 +87,8 @@ export default async function ReportsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <ReportAnalyzerForm initialResponse={latestAnalyzerResponse} />
 
         <div className="grid gap-4 xl:grid-cols-2">
           {data.reports.map((report) => {
